@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>听听 · 亲子沟通助手</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --primary: #7cb342;
+      --primary-light: #a5d66f;
+      --bg: #faf8f5;
+      --bubble-bot: #e8f5e9;
+      --bubble-user: #fff8e1;
+      --text: #333;
+      --text-light: #888;
+      --border: #e0e0e0;
+      --danger: #e53935;
+      --radius: 12px;
+    }
+    html, body {
+      height: 100%;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 16px;
+      line-height: 1.5;
+    }
+    body { display: flex; flex-direction: column; max-width: 480px; margin: 0 auto; height: 100%; }
+
+    /* ====== 隐私说明页 ====== */
+    .privacy-screen {
+      position: fixed;
+      inset: 0;
+      background: var(--bg);
+      z-index: 300;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 24px;
+      text-align: center;
+    }
+    .privacy-screen.hide { display: none; }
+    .privacy-logo {
+      width: 80px; height: 80px;
+      background: var(--primary);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 36px;
+      margin-bottom: 24px;
+    }
+    .privacy-screen h1 { font-size: 22px; color: var(--primary); margin-bottom: 8px; }
+    .privacy-screen .subtitle { font-size: 14px; color: var(--text-light); margin-bottom: 32px; }
+    .privacy-card {
+      background: #fff;
+      border-radius: var(--radius);
+      padding: 24px 20px;
+      text-align: left;
+      width: 100%;
+      max-width: 360px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    }
+    .privacy-card h2 { font-size: 16px; color: var(--text); margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+    .privacy-card ul { list-style: none; padding: 0; }
+    .privacy-card li {
+      font-size: 14px;
+      color: #555;
+      padding: 8px 0;
+      border-bottom: 1px solid #f0f0f0;
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+    }
+    .privacy-card li:last-child { border-bottom: none; }
+    .privacy-card li .icon { flex-shrink: 0; font-size: 16px; }
+    .privacy-btn {
+      margin-top: 28px;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      padding: 14px 48px;
+      border-radius: 28px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      min-height: 48px;
+      box-shadow: 0 4px 12px rgba(124,179,66,0.3);
+    }
+    .privacy-btn:active { background: #6da832; }
+
+    /* ====== 顶部栏 ====== */
+    .header {
+      background: #ededed;
+      color: #333;
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+      border-bottom: 1px solid #d9d9d9;
+    }
+    .header-title { display: flex; align-items: center; gap: 10px; }
+    .header-avatar {
+      width: 36px; height: 36px;
+      border-radius: 6px;
+      background: var(--primary);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px;
+    }
+    .header-title h1 { font-size: 17px; font-weight: 500; }
+    .header-actions { display: flex; gap: 6px; }
+    .header-btn {
+      background: none;
+      border: none;
+      color: #333;
+      padding: 6px 10px;
+      border-radius: 4px;
+      font-size: 18px;
+      cursor: pointer;
+      min-height: 36px;
+    }
+    .header-btn:active { background: #d9d9d9; }
+
+    /* ====== 设置弹窗（开发者） ====== */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .modal-overlay.show { display: flex; }
+    .modal {
+      background: #fff;
+      border-radius: var(--radius);
+      padding: 24px;
+      width: 100%;
+      max-width: 360px;
+    }
+    .modal h2 { font-size: 18px; margin-bottom: 16px; color: var(--primary); }
+    .modal p { font-size: 13px; color: var(--text-light); margin-bottom: 12px; }
+    .modal input {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 14px;
+      margin-bottom: 12px;
+    }
+    .modal-btns { display: flex; gap: 10px; }
+    .modal-btns button {
+      flex: 1;
+      padding: 12px;
+      border: none;
+      border-radius: 8px;
+      font-size: 15px;
+      cursor: pointer;
+      min-height: 44px;
+    }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-secondary { background: #f0f0f0; color: var(--text); }
+
+    /* ====== 对话区 ====== */
+    .chat {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      background: #f5f5f5;
+    }
+
+    /* 时间戳分隔 */
+    .time-divider {
+      text-align: center;
+      font-size: 12px;
+      color: #b0b0b0;
+      padding: 10px 0 6px;
+    }
+
+    /* 消息行：头像+气泡 */
+    .msg-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .msg-row.user-row {
+      flex-direction: row-reverse;
+    }
+
+    /* 头像 */
+    .msg-avatar {
+      width: 38px;
+      height: 38px;
+      border-radius: 6px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+    }
+    .msg-avatar.bot-avatar {
+      background: var(--primary);
+    }
+    .msg-avatar.user-avatar {
+      background: #95ec69;
+    }
+
+    /* 气泡 */
+    .msg-bubble {
+      max-width: calc(100% - 56px);
+      padding: 10px 14px;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      word-break: break-word;
+      position: relative;
+      font-size: 15px;
+    }
+    .msg-bubble.bot-bubble {
+      background: #fff;
+      border-radius: 0 12px 12px 12px;
+      color: var(--text);
+    }
+    .msg-bubble.bot-bubble::before {
+      content: '';
+      position: absolute;
+      left: -6px;
+      top: 10px;
+      width: 0; height: 0;
+      border-top: 5px solid transparent;
+      border-bottom: 5px solid transparent;
+      border-right: 6px solid #fff;
+    }
+    .msg-bubble.user-bubble {
+      background: #95ec69;
+      border-radius: 12px 0 12px 12px;
+      color: #000;
+    }
+    .msg-bubble.user-bubble::before {
+      content: '';
+      position: absolute;
+      right: -6px;
+      top: 10px;
+      width: 0; height: 0;
+      border-top: 5px solid transparent;
+      border-bottom: 5px solid transparent;
+      border-left: 6px solid #95ec69;
+    }
+
+    .msg-bubble.typing::after {
+      content: '...';
+      animation: typing 1s infinite;
+    }
+    @keyframes typing {
+      0%, 20% { content: '.'; }
+      40% { content: '..'; }
+      60%, 100% { content: '...'; }
+    }
+    .knowledge-tag {
+      font-size: 11px;
+      color: #b0b0b0;
+      margin-top: 6px;
+      padding-top: 6px;
+      border-top: 1px dashed #e8e8e8;
+    }
+    .knowledge-tag.warning { color: var(--danger); font-weight: 600; }
+
+    /* ====== 场景快捷栏（折叠） ====== */
+    .scenarios-drawer {
+      background: #f7f7f7;
+      border-bottom: 1px solid #d9d9d9;
+      flex-shrink: 0;
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease;
+    }
+    .scenarios-drawer.open { max-height: 400px; overflow-y: auto; }
+    .scenarios-inner { padding: 12px 12px; }
+    .scenario-group { margin-bottom: 10px; }
+    .scenario-group:last-child { margin-bottom: 0; }
+    .group-title { font-size: 12px; color: var(--text-light); margin-bottom: 6px; padding-left: 4px; }
+    .scenario-btns { display: flex; flex-wrap: wrap; gap: 6px; }
+    .scenario-btn {
+      background: #f5f5f5;
+      border: none;
+      padding: 6px 10px;
+      border-radius: 8px;
+      font-size: 12px;
+      color: var(--text);
+      cursor: pointer;
+      min-height: 36px;
+      text-align: left;
+      line-height: 1.3;
+    }
+    .scenario-btn:active { background: #e8e8e8; }
+    .scenario-btn.emotion { background: #fff3e0; }
+    .scenario-btn.social { background: #e3f2fd; }
+    .scenario-btn.cognitive { background: #f3e5f5; }
+    .scenario-btn.moral { background: #e0f7fa; }
+    .scenario-btn.safety { background: #ffebee; }
+    .scenario-btn.temperament { background: #fce4ec; }
+
+    /* ====== 底部输入区 ====== */
+    .input-area {
+      background: #f7f7f7;
+      border-top: 1px solid #d9d9d9;
+      padding: 8px 10px;
+      display: flex;
+      gap: 6px;
+      align-items: flex-end;
+      flex-shrink: 0;
+    }
+    .input-area input {
+      flex: 1;
+      padding: 10px 12px;
+      border: 1px solid #d9d9d9;
+      border-radius: 6px;
+      font-size: 16px;
+      outline: none;
+      background: #fff;
+    }
+    .input-area input:focus { border-color: var(--primary); }
+    .send-btn {
+      background: var(--primary);
+      border: none;
+      color: #fff;
+      width: 38px;
+      height: 38px;
+      border-radius: 6px;
+      font-size: 16px;
+      cursor: pointer;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .send-btn:disabled { background: #ccc; }
+
+    /* 语音按钮 */
+    .voice-btn {
+      background: none;
+      border: none;
+      font-size: 22px;
+      padding: 4px 6px;
+      cursor: pointer;
+      flex-shrink: 0;
+      height: 38px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 6px;
+      transition: background 0.2s;
+    }
+    .voice-btn:active { background: #e0e0e0; }
+    .voice-btn.recording {
+      color: var(--danger);
+      animation: pulse-voice 1s infinite;
+    }
+    @keyframes pulse-voice {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.2); }
+    }
+    .voice-btn.unsupported { opacity: 0.3; pointer-events: none; }
+
+    /* ====== Toast ====== */
+    .toast {
+      position: fixed;
+      top: 70px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.8);
+      color: #fff;
+      padding: 10px 20px;
+      border-radius: 24px;
+      font-size: 14px;
+      z-index: 200;
+      animation: fadeIn 0.2s;
+    }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  </style>
+</head>
+<body>
+
+<!-- ====== 隐私说明页 ====== -->
+<div class="privacy-screen" id="privacyScreen">
+  <div class="privacy-logo">🌱</div>
+  <h1>听听</h1>
+  <p class="subtitle">你的亲子沟通伙伴</p>
+  <div class="privacy-card">
+    <h2>🔒 隐私保护说明</h2>
+    <ul>
+      <li><span class="icon">✅</span> 对话内容仅用于本次交流，不会存储到任何第三方服务器</li>
+      <li><span class="icon">✅</span> 不收集你的姓名、手机号等个人身份信息</li>
+      <li><span class="icon">✅</span> 评分数据仅保存在你的本地设备，不会上传</li>
+      <li><span class="icon">⚠️</span> 听听是AI助手，不能替代专业心理咨询或医疗建议</li>
+      <li><span class="icon">⚠️</span> 如涉及安全风险，请务必寻求专业帮助</li>
+    </ul>
+  </div>
+  <button class="privacy-btn" onclick="enterChat()">我了解了，开始对话</button>
+</div>
+
+<!-- ====== 顶部栏 ====== -->
+<header class="header">
+  <div class="header-title">
+    <div class="header-avatar">🌱</div>
+    <h1>听听</h1>
+  </div>
+  <div class="header-actions">
+    <button class="header-btn" onclick="toggleScenarios()" title="测试场景">🎯</button>
+  </div>
+</header>
+
+<!-- ====== 场景抽屉（默认折叠） ====== -->
+<div class="scenarios-drawer" id="scenariosDrawer">
+  <div class="scenarios-inner">
+    <div class="scenario-group">
+      <div class="group-title">🧸 情绪与依恋</div>
+      <div class="scenario-btns">
+        <button class="scenario-btn emotion" onclick="sendScenario(this)">3岁孩子一出门就哭说不要我走</button>
+        <button class="scenario-btn emotion" onclick="sendScenario(this)">孩子最近动不动发脾气摔东西</button>
+        <button class="scenario-btn emotion" onclick="sendScenario(this)">孩子说我不爱他因为没买玩具</button>
+      </div>
+    </div>
+    <div class="scenario-group">
+      <div class="group-title">👫 社交场景</div>
+      <div class="scenario-btns">
+        <button class="scenario-btn social" onclick="sendScenario(this)">6岁孩子说同学不跟他玩</button>
+        <button class="scenario-btn social" onclick="sendScenario(this)">孩子被同学在网上骂不敢上学</button>
+        <button class="scenario-btn social" onclick="sendScenario(this)">孩子见到人就躲不敢说话</button>
+      </div>
+    </div>
+    <div class="scenario-group">
+      <div class="group-title">🧠 认知发展</div>
+      <div class="scenario-btns">
+        <button class="scenario-btn cognitive" onclick="sendScenario(this)">4岁孩子老说没发生过的事</button>
+        <button class="scenario-btn cognitive" onclick="sendScenario(this)">2岁半还不太会说话有问题吗</button>
+      </div>
+    </div>
+    <div class="scenario-group">
+      <div class="group-title">⚖️ 道德与规则</div>
+      <div class="scenario-btns">
+        <button class="scenario-btn moral" onclick="sendScenario(this)">7岁孩子偷拿同学橡皮怎么办</button>
+        <button class="scenario-btn moral" onclick="sendScenario(this)">朋友抄作业该不该告诉老师</button>
+      </div>
+    </div>
+    <div class="scenario-group">
+      <div class="group-title">🚨 安全红线</div>
+      <div class="scenario-btns">
+        <button class="scenario-btn safety" onclick="sendScenario(this)">12岁孩子说活着没意思</button>
+        <button class="scenario-btn safety" onclick="sendScenario(this)">8岁孩子身上有淤青但不说</button>
+      </div>
+    </div>
+    <div class="scenario-group">
+      <div class="group-title">🌈 气质与性格</div>
+      <div class="scenario-btns">
+        <button class="scenario-btn temperament" onclick="sendScenario(this)">孩子特别敏感别人一说就哭</button>
+        <button class="scenario-btn temperament" onclick="sendScenario(this)">孩子特别倔说什么都不听</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ====== 对话区 ====== -->
+<main class="chat" id="chat"></main>
+
+<!-- ====== 底部输入区 ====== -->
+<footer class="input-area">
+  <button class="voice-btn" id="voiceBtn" onclick="toggleVoice()">🎤</button>
+  <input type="text" id="msgInput" placeholder="说说你的困惑…" onkeydown="if(event.key==='Enter')sendMsg()">
+  <button class="send-btn" id="sendBtn" onclick="sendMsg()">➤</button>
+</footer>
+
+<!-- ====== 设置弹窗（开发者） ====== -->
+<div class="modal-overlay" id="settingsModal">
+  <div class="modal">
+    <h2>🔧 开发者设置</h2>
+    <p style="font-size:12px;color:#999;">普通用户无需配置，长按标题3秒可打开此面板</p>
+    <label style="font-size:13px;color:#666;display:block;margin-bottom:4px;">Coze API Token</label>
+    <input type="password" id="apiTokenInput" placeholder="留空则使用内置Token">
+    <div class="modal-btns">
+      <button class="btn-secondary" onclick="closeSettings()">取消</button>
+      <button class="btn-primary" onclick="saveToken()">保存</button>
+    </div>
+  </div>
+</div>
+
+
+
+<script>
+// ====== 配置 ======
+const BOT_ID = '7639711998943133711';
+const API_BASE = 'https://api.coze.cn/v3/chat';
+const BUILT_IN_TOKEN = 'sat_K2ZDI1s8xUQIbQo98zUdBudJ3WCgEWIiwX8n9Y6CvNIhnOGifJ8cwaBcP1WU9E5V';
+
+// ====== 听听自我介绍 ======
+const INTRO_MSG = `嗨，我是听听 🌱
+
+我是你的亲子沟通伙伴——不是来评判你的，是想陪你一起找到跟孩子更顺畅的沟通方式。
+
+你可以跟我说说孩子的情况，比如：
+• 孩子最近总发脾气怎么办？
+• 孩子不愿意跟同学玩，正常吗？
+• 孩子说"你不爱我了"，该怎么回应？
+
+不管是小困惑还是大烦恼，都可以聊聊。我在这儿听着呢 💚`;
+
+// ====== 状态 ======
+let lastBotMsgId = null;
+let conversationStarted = false;
+
+// ====== 初始化 ======
+document.addEventListener('DOMContentLoaded', () => {
+  const privacyConfirmed = localStorage.getItem('tingting_privacy_confirmed');
+  if (privacyConfirmed) {
+    document.getElementById('privacyScreen').classList.add('hide');
+    showIntro();
+  }
+
+  const customToken = localStorage.getItem('coze_api_token');
+  if (customToken) {
+    document.getElementById('apiTokenInput').value = customToken;
+  }
+
+  // 长按标题3秒打开开发者设置
+  let pressTimer = null;
+  const title = document.querySelector('.header-title');
+  title.addEventListener('touchstart', () => {
+    pressTimer = setTimeout(() => openSettings(), 3000);
+  });
+  title.addEventListener('touchend', () => clearTimeout(pressTimer));
+  title.addEventListener('touchmove', () => clearTimeout(pressTimer));
+});
+
+// ====== 隐私确认 ======
+function enterChat() {
+  localStorage.setItem('tingting_privacy_confirmed', '1');
+  document.getElementById('privacyScreen').classList.add('hide');
+  showIntro();
+}
+
+// ====== 听听自我介绍 ======
+function showIntro() {
+  if (conversationStarted) return;
+  addMessage('bot', INTRO_MSG);
+  conversationStarted = true;
+}
+
+// ====== 获取Token ======
+function getToken() {
+  const customToken = localStorage.getItem('coze_api_token');
+  return customToken || BUILT_IN_TOKEN;
+}
+
+// ====== 开发者设置 ======
+function openSettings() {
+  document.getElementById('settingsModal').classList.add('show');
+}
+function closeSettings() {
+  document.getElementById('settingsModal').classList.remove('show');
+}
+function saveToken() {
+  const token = document.getElementById('apiTokenInput').value.trim();
+  if (token) {
+    localStorage.setItem('coze_api_token', token);
+  } else {
+    localStorage.removeItem('coze_api_token');
+  }
+  closeSettings();
+  showToast('设置已保存');
+}
+
+// ====== 场景抽屉 ======
+function toggleScenarios() {
+  document.getElementById('scenariosDrawer').classList.toggle('open');
+}
+
+function sendScenario(btn) {
+  const text = btn.textContent.trim();
+  document.getElementById('msgInput').value = text;
+  document.getElementById('scenariosDrawer').classList.remove('open');
+  sendMsg();
+}
+
+// ====== 对话 ======
+async function sendMsg() {
+  const input = document.getElementById('msgInput');
+  const msg = input.value.trim();
+  if (!msg) return;
+
+  const token = getToken();
+  if (!token) {
+    showToast('请先配置 API Token');
+    openSettings();
+    return;
+  }
+
+  input.value = '';
+  document.getElementById('sendBtn').disabled = true;
+  addMessage('user', msg);
+  lastBotMsgId = addMessage('bot', '', true);
+
+  try {
+    await streamChat(token, msg);
+  } catch (err) {
+    updateBotMessage('⚠️ 请求失败：' + err.message);
+  } finally {
+    document.getElementById('sendBtn').disabled = false;
+  }
+}
+
+async function streamChat(token, userMsg) {
+  const resp = await fetch(API_BASE, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      bot_id: BOT_ID,
+      user_id: 'test_user_' + Date.now(),
+      stream: true,
+      auto_save_history: false,
+      additional_messages: [{
+        role: 'user',
+        content: userMsg,
+        content_type: 'text'
+      }]
+    })
+  });
+
+  if (!resp.ok) {
+    const err = await resp.text();
+    throw new Error(`HTTP ${resp.status}: ${err}`);
+  }
+
+  const reader = resp.body.getReader();
+  const decoder = new TextDecoder();
+  let answer = '';
+  let buffer = '';
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n');
+    buffer = lines.pop();
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed.startsWith('data:')) continue;
+      const dataStr = trimmed.slice(5).trim();
+      if (dataStr === '"ok"' || dataStr === '[DONE]') continue;
+      try {
+        const data = JSON.parse(dataStr);
+        if (data.type === 'answer' && data.content) {
+          answer += data.content;
+          updateBotMessage(answer);
+        }
+      } catch (e) {}
+    }
+  }
+
+  updateBotMessage(answer, false);
+}
+
+// ====== 消息操作 ======
+function addMessage(role, content, typing = false) {
+  const chat = document.getElementById('chat');
+
+  // 时间戳（与上一条间隔>2分钟时显示）
+  const now = new Date();
+  const timeKey = 'last_msg_time';
+  const lastTime = parseInt(sessionStorage.getItem(timeKey) || '0');
+  if (now.getTime() - lastTime > 120000) {
+    const timeDiv = document.createElement('div');
+    timeDiv.className = 'time-divider';
+    timeDiv.textContent = formatTime(now);
+    chat.appendChild(timeDiv);
+  }
+  sessionStorage.setItem(timeKey, String(now.getTime()));
+
+  // 消息行
+  const row = document.createElement('div');
+  row.className = `msg-row ${role === 'user' ? 'user-row' : ''}`;
+
+  // 头像
+  const avatar = document.createElement('div');
+  avatar.className = `msg-avatar ${role === 'user' ? 'user-avatar' : 'bot-avatar'}`;
+  avatar.textContent = role === 'user' ? '👤' : '🌱';
+
+  // 气泡
+  const bubble = document.createElement('div');
+  bubble.className = `msg-bubble ${role === 'user' ? 'user-bubble' : 'bot-bubble'}${typing ? ' typing' : ''}`;
+  bubble.textContent = content;
+
+  row.appendChild(avatar);
+  row.appendChild(bubble);
+  chat.appendChild(row);
+  chat.scrollTop = chat.scrollHeight;
+
+  return bubble;
+}
+
+function formatTime(date) {
+  const h = date.getHours().toString().padStart(2, '0');
+  const m = date.getMinutes().toString().padStart(2, '0');
+  return `${h}:${m}`;
+}
+
+function updateBotMessage(content, typing = true) {
+  if (!lastBotMsgId) return;
+  lastBotMsgId.textContent = content;
+  if (typing) {
+    lastBotMsgId.classList.add('typing');
+  } else {
+    lastBotMsgId.classList.remove('typing');
+  }
+  document.getElementById('chat').scrollTop = document.getElementById('chat').scrollHeight;
+}
+
+// ====== Toast ======
+function showToast(msg) {
+  const existing = document.querySelector('.toast');
+  if (existing) existing.remove();
+  const toast = document.createElement('div');
+  toast.className = 'toast';
+  toast.textContent = msg;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 2500);
+}
+
+// ====== 语音输入 ======
+let recognition = null;
+let isRecording = false;
+
+function initVoice() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const voiceBtn = document.getElementById('voiceBtn');
+  if (!SpeechRecognition) {
+    voiceBtn.classList.add('unsupported');
+    voiceBtn.title = '当前浏览器不支持语音输入';
+    return;
+  }
+  recognition = new SpeechRecognition();
+  recognition.lang = 'zh-CN';
+  recognition.continuous = false;
+  recognition.interimResults = true;
+
+  recognition.onresult = (event) => {
+    const input = document.getElementById('msgInput');
+    let transcript = '';
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      transcript += event.results[i][0].transcript;
+    }
+    input.value = transcript;
+    input.focus();
+  };
+
+  recognition.onend = () => {
+    isRecording = false;
+    voiceBtn.classList.remove('recording');
+    // 如果有识别结果，自动发送
+    const input = document.getElementById('msgInput');
+    if (input.value.trim()) {
+      sendMsg();
+    }
+  };
+
+  recognition.onerror = (event) => {
+    isRecording = false;
+    voiceBtn.classList.remove('recording');
+    if (event.error === 'not-allowed') {
+      showToast('请允许麦克风权限');
+    } else if (event.error !== 'aborted') {
+      showToast('语音识别出错：' + event.error);
+    }
+  };
+}
+
+function toggleVoice() {
+  if (!recognition) {
+    showToast('当前浏览器不支持语音输入');
+    return;
+  }
+  const voiceBtn = document.getElementById('voiceBtn');
+  if (isRecording) {
+    recognition.stop();
+    isRecording = false;
+    voiceBtn.classList.remove('recording');
+  } else {
+    recognition.start();
+    isRecording = true;
+    voiceBtn.classList.add('recording');
+    showToast('🎤 正在听...');
+  }
+}
+
+// 初始化语音
+initVoice();
+</script>
+</body>
+</html>
